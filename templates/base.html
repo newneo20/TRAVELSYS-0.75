@@ -47,7 +47,12 @@
       {% if user.is_authenticated %}
       <div class="relative">
         <button id="user-menu-btn" class="rounded-full bg-gray-800 p-1">
-          <img class="w-8 h-8 rounded-full" src="{{ user.logo.url|default:'#' }}">
+          {% if user.logo %}
+            <img class="w-8 h-8 rounded-full" src="{{ user.logo.url }}" alt="Avatar">
+          {% else %}
+            <img class="w-8 h-8 rounded-full" src="{% static 'images/default_avatar.png' %}" alt="Avatar por defecto">
+          {% endif %}
+
         </button>
         <div id="dropdown-user" class="hidden absolute right-0 mt-3 w-48 bg-white dark:bg-gray-700 rounded shadow">
           <div class="p-3 border-b">
