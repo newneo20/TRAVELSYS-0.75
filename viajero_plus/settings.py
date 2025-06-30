@@ -139,6 +139,9 @@ DATABASES = {
         'PASSWORD': '0123456789',  # cambia según tu clave
         'HOST': 'store.prod.travel-sys.loc',
         'PORT': '5432',  # si vas a escribir; si solo vas a leer, usa '5433'
+         'OPTIONS': {
+            'sslmode': 'require',  # puede ser 'prefer' o 'require'
+        },
     }
 }
 
