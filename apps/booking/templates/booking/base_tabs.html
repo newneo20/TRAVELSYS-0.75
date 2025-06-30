@@ -44,7 +44,13 @@
         {% if user.is_authenticated %}
           <div x-data="{ open: false }" class="relative">
             <button @click="open = !open" class="flex items-center">
-              <img src="{{ user.logo.url|default:'/media/logos/user_default_logo.png' }}" class="h-10 w-10 rounded-full border-2 border-indigo-400">
+
+              {% if user.logo %}
+                <img src="{{ user.logo.url }}" class="h-10 w-10 rounded-full border-2 border-indigo-400" alt="Avatar del usuario">
+              {% else %}
+                <img src="{% static 'images/user_default_logo.png' %}" class="h-10 w-10 rounded-full border-2 border-indigo-400" alt="Avatar por defecto">
+              {% endif %}
+
               <span class="ml-2">{{ user.agencia|default:"Usuario" }}</span>
               <i class="fas fa-chevron-down ml-1"></i>
             </button>
