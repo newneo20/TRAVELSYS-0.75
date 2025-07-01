@@ -2596,6 +2596,7 @@ def hotel_pago_reserva_distal(request, hotel_code):
 from decimal import Decimal, InvalidOperation
 import html
 import json
+
 @login_required
 def confirmar_reserva_distal(request, hotel_code):
     print("🔐 Verificando método de solicitud...")
@@ -2609,12 +2610,16 @@ def confirmar_reserva_distal(request, hotel_code):
     print("📦 Obteniendo JSON de habitaciones y fechas del POST...")
     raw_json = request.POST.get('info_habitaciones', '{}')
     fechas = request.POST.get('fechas_viaje', '')
-    print("✅ JSON recibido:", raw_json)
+    print("✅ JSON recibido (raw):", raw_json)
 
-    print("🧼 Decodificando y limpiando JSON...")
+    # Tratamiento de JSON como en hotel_pago_reserva_distal
     try:
-        raw_json_clean = html.unescape(raw_json)
-        datos = json.loads(raw_json_clean)
+        print("🔧 Decodificando unicode escape...")
+        fixed = raw_json.encode('utf-8').decode('unicode_escape')
+        print("✅ Texto decodificado:", fixed)
+
+        print("📦 Cargando JSON desde texto decodificado...")
+        datos = json.loads(fixed)
         datos_habs = datos.get('datosHabitaciones', [])
         print(f"✅ Habitaciones decodificadas correctamente: {len(datos_habs)}")
     except Exception as e:
@@ -2646,9 +2651,9 @@ def confirmar_reserva_distal(request, hotel_code):
         print(f"  ✅ Booking Code generado: {booking_code}")
 
         try:
-            precio_cliente = Decimal(precio_cliente_str)
-            costo_total = Decimal(costo_total_str)
-            precio_base = Decimal(precio_base_str)
+            precio_cliente = Decimal(precio_cliente_str.replace(',', '.'))
+            costo_total = Decimal(costo_total_str.replace(',', '.'))
+            precio_base = Decimal(precio_base_str.replace(',', '.'))
             print(f"  💲 Valores numéricos convertidos correctamente")
         except InvalidOperation as e:
             print(f"  ❌ Error convirtiendo a Decimal: {e}")
@@ -2767,7 +2772,6 @@ def confirmar_reserva_distal(request, hotel_code):
     print("🎉 Reserva confirmada exitosamente.")
     messages.success(request, "¡Tu reserva se ha confirmado correctamente!")
     return redirect('booking:user_dashboard')
-
 
 
 # ─────────────────────────────────
