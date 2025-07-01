@@ -415,7 +415,6 @@ def listar_usuarios(request):
 @login_required
 def crear_usuario(request):
     if request.method == 'POST':
-        # Capturar los datos del formulario
         agencia            = request.POST.get('agencia')
         username           = request.POST.get('username')
         email              = request.POST.get('email')
@@ -429,7 +428,6 @@ def crear_usuario(request):
         saldo_pendiente    = request.POST.get('saldo_pendiente')
         logo               = request.FILES.get('logo')
 
-        # Fees que sí existen en tu modelo
         fee_hotel          = request.POST.get('fee_hotel')
         tipo_fee_hotel     = request.POST.get('tipo_fee_hotel')
         fee_carro          = request.POST.get('fee_carro')
@@ -437,7 +435,6 @@ def crear_usuario(request):
         fee_traslados      = request.POST.get('fee_traslados')
         tipo_fee_traslados = request.POST.get('tipo_fee_traslados')
 
-        # Validar contraseña
         if password != confirm_password:
             messages.error(request, "Las contraseñas no coinciden.")
             return render(request, 'usuarios/crear_usuario.html', {
@@ -458,7 +455,6 @@ def crear_usuario(request):
                 'tipo_fee_traslados': tipo_fee_traslados,
             })
 
-        # Crear el usuario
         nuevo_usuario = CustomUser(
             agencia=agencia,
             username=username,
@@ -475,9 +471,14 @@ def crear_usuario(request):
             tipo_fee_carro=tipo_fee_carro,
             fee_traslados=fee_traslados,
             tipo_fee_traslados=tipo_fee_traslados,
-            logo=logo,
+            logo=logo
         )
         nuevo_usuario.set_password(password)
+
+        # Logo por defecto si no se sube uno nuevo
+        if not logo:
+            nuevo_usuario.logo.name = 'logos/user_default_logo.png'
+
         nuevo_usuario.save()
 
         messages.success(request, "Usuario creado exitosamente.")
@@ -489,11 +490,9 @@ def crear_usuario(request):
 @login_required
 def editar_usuario(request, usuario_id):
     usuario = get_object_or_404(CustomUser, id=usuario_id)
-    # Ajustamos la lista de fees para que coincida con los bloques de la plantilla
     lista_fees = ['hotel', 'nino', 'carro', 'traslados']
 
     if request.method == 'POST':
-        # 1) Campos básicos
         usuario.agencia          = request.POST.get('agencia')
         usuario.username         = request.POST.get('username')
         usuario.email            = request.POST.get('email')
@@ -503,7 +502,6 @@ def editar_usuario(request, usuario_id):
         usuario.telefono_dueno   = request.POST.get('telefono_dueno')
         usuario.is_manager       = request.POST.get('is_manager') == 'on'
 
-        # 2) Contraseña (solo si cambian)
         password        = request.POST.get('password')
         confirm_passwd  = request.POST.get('confirm_password')
         if password:
@@ -515,32 +513,26 @@ def editar_usuario(request, usuario_id):
                 })
             usuario.set_password(password)
 
-        # 3) Saldo
-        usuario.saldo_pendiente = request.POST.get('saldo_pendiente')
-
-        # 4) Fees — ahora incluimos 'nino' y quitamos el viejo 'tarara'
-        usuario.fee_hotel        = request.POST.get('fee_hotel')
-        usuario.tipo_fee_hotel   = request.POST.get('tipo_fee_hotel')
-
-        usuario.fee_nino         = request.POST.get('fee_nino')
-        usuario.tipo_fee_nino    = request.POST.get('tipo_fee_nino')
-
-        usuario.fee_carro        = request.POST.get('fee_carro')
-        usuario.tipo_fee_carro   = request.POST.get('tipo_fee_carro')
-
+        usuario.saldo_pendiente      = request.POST.get('saldo_pendiente')
+        usuario.fee_hotel            = request.POST.get('fee_hotel')
+        usuario.tipo_fee_hotel       = request.POST.get('tipo_fee_hotel')
+        usuario.fee_nino             = request.POST.get('fee_nino')
+        usuario.tipo_fee_nino        = request.POST.get('tipo_fee_nino')
+        usuario.fee_carro            = request.POST.get('fee_carro')
+        usuario.tipo_fee_carro       = request.POST.get('tipo_fee_carro')
         usuario.fee_traslados        = request.POST.get('fee_traslados')
         usuario.tipo_fee_traslados   = request.POST.get('tipo_fee_traslados')
 
-        # 5) Logo (si suben uno nuevo)
+        # Logo nuevo o por defecto si no tiene ninguno
         if 'logo' in request.FILES:
             usuario.logo = request.FILES['logo']
+        elif not usuario.logo:
+            usuario.logo.name = 'logos/user_default_logo.png'
 
-        # 6) Guardar y redirigir
         usuario.save()
         messages.success(request, "Usuario actualizado correctamente.")
         return redirect('listar_usuarios')
 
-    # GET: render con datos actuales
     return render(request, 'usuarios/editar_usuario.html', {
         'usuario': usuario,
         'lista_fees': lista_fees
