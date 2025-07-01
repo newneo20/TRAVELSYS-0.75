@@ -125,25 +125,28 @@ WSGI_APPLICATION = 'viajero_plus.wsgi.application'
 # BD LOCAL
 #DATABASES = {
 #    'default': {
-#        'ENGINE': 'django.db.backends.sqlite3',
-#        'NAME': BASE_DIR / 'db.sqlite3',
+#        'ENGINE': 'django.db.backends.sqlite3',      # Motor de base de datos SQLite
+#        'NAME': BASE_DIR / 'db.sqlite3',             # Ruta del archivo de la base de datos dentro del proyecto
 #    }
 #}
 
+
 # BD EN EL SERVER 
+# Configuración de la base de datos PostgreSQL
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'db_build',  # cambia por el nombre real de tu BD
-        'USER': 'newneo20',      # cambia según tu usuario
-        'PASSWORD': '0123456789',  # cambia según tu clave
-        'HOST': 'store.prod.travel-sys.loc',
-        'PORT': '5432',  # si vas a escribir; si solo vas a leer, usa '5433'
+     'default': {
+         'ENGINE': 'django.db.backends.postgresql',  # Motor de base de datos utilizado: PostgreSQL
+         'NAME': 'db_build',                         # Nombre de la base de datos
+         'USER': 'newneo20',                         # Usuario con permisos sobre la base de datos
+         'PASSWORD': '0123456789',                   # Contraseña del usuario
+         'HOST': 'store.prod.travel-sys.loc',        # Dirección del host donde corre la base de datos
+         'PORT': '5432',                             # Puerto de conexión (5432 para lectura/escritura, 5433 para solo lectura)
          'OPTIONS': {
-            'sslmode': 'require',  # puede ser 'prefer' o 'require'
-        },
-    }
-}
+             'sslmode': 'require',                   # Modo SSL (puede ser 'prefer' o 'require' según seguridad deseada)
+         },
+     }
+ }
+
 
 
 

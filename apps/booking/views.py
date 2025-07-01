@@ -1531,7 +1531,7 @@ def guardar_remesa(request):
                 numero_confirmacion=None,
                 cobrada=False,
                 pagada=False,
-                fecha_reserva=datetime.now()
+                fecha_reserva=timezone.now()
             )
 
             print(f"📦 Reserva vinculada creada ID {reserva.id}")
@@ -2596,54 +2596,63 @@ def hotel_pago_reserva_distal(request, hotel_code):
 from decimal import Decimal, InvalidOperation
 import html
 import json
-
 @login_required
 def confirmar_reserva_distal(request, hotel_code):
+    print("🔐 Verificando método de solicitud...")
     if request.method != 'POST':
+        print("❌ Método no permitido. Redirigiendo...")
         return redirect('booking:hotel_pago_reserva_distal', hotel_code=hotel_code)
 
+    print("🏨 Buscando hotel importado por código:", hotel_code)
     hotel = get_object_or_404(HotelImportado, hotel_code=hotel_code)
+
+    print("📦 Obteniendo JSON de habitaciones y fechas del POST...")
     raw_json = request.POST.get('info_habitaciones', '{}')
     fechas = request.POST.get('fechas_viaje', '')
     print("✅ JSON recibido:", raw_json)
 
+    print("🧼 Decodificando y limpiando JSON...")
     try:
         raw_json_clean = html.unescape(raw_json)
         datos = json.loads(raw_json_clean)
         datos_habs = datos.get('datosHabitaciones', [])
-        print(f"✅ Habitaciones decodificadas: {len(datos_habs)}")
+        print(f"✅ Habitaciones decodificadas correctamente: {len(datos_habs)}")
     except Exception as e:
-        print(f"❌ Error decodificando JSON: {e}")
+        print(f"❌ Error al decodificar el JSON: {e}")
         datos_habs = []
 
+    print("📊 Inicializando acumuladores y lista de habitaciones...")
     habitaciones = []
     precio_total = Decimal('0.00')
     costo_total_total = Decimal('0.00')
     costo_sin_fee_total = Decimal('0.00')
 
     for idx, hab in enumerate(datos_habs, start=1):
+        print(f"🔍 Procesando habitación #{idx}...")
         raw_val = request.POST.get(f'opcion_{idx-1}')
-        print(f"🔍 Procesando habitación {idx}, opción bruta: {raw_val}")
+        print(f"  👉 Opción seleccionada: {raw_val}")
 
         if not raw_val:
-            print("⚠️ Opción vacía, se omite.")
+            print("  ⚠️ No se seleccionó opción. Se omite esta habitación.")
             continue
 
         parts = raw_val.split('|')
         if len(parts) != 9:
-            print("⚠️ Formato inválido en la opción, se omite.")
+            print("  ⚠️ Formato de opción inválido. Se omite esta habitación.")
             continue
 
         id_str, nombre, precio_cliente_str, costo_total_str, precio_base_str, moneda, hotel_code_val, room_code, meal_code = parts
         booking_code = f"{hotel_code_val}|{room_code}|{meal_code}"
+        print(f"  ✅ Booking Code generado: {booking_code}")
 
         try:
             precio_cliente = Decimal(precio_cliente_str)
             costo_total = Decimal(costo_total_str)
             precio_base = Decimal(precio_base_str)
+            print(f"  💲 Valores numéricos convertidos correctamente")
         except InvalidOperation as e:
-            print(f"❌ Error al convertir valores decimales para habitación {idx}: {e}")
-            continue  # omitir esta habitación si los datos son inválidos
+            print(f"  ❌ Error convirtiendo a Decimal: {e}")
+            continue
 
         precio_total += precio_cliente
         costo_total_total += costo_total
@@ -2667,23 +2676,27 @@ def confirmar_reserva_distal(request, hotel_code):
             'ninos_numeros': list(range(1, hab.get('ninos', 0) + 1)),
             'fechas_viaje': fechas,
         })
+        print(f"  ✅ Habitación #{idx} agregada con éxito.")
 
-    print(f"💰 Total habitaciones: {len(habitaciones)} | Precio total: {precio_total} | Costo total: {costo_total_total} | Costo sin fee: {costo_sin_fee_total}")
+    print(f"📦 Resumen total: {len(habitaciones)} habitaciones.")
+    print(f"   💵 Precio total: {precio_total} | Costo total: {costo_total_total} | Costo sin fee: {costo_sin_fee_total}")
 
+    print("🧾 Obteniendo datos del agente y pago...")
     agente_nom = request.POST.get('agente_nombre', '').strip()
     agente_cod = request.POST.get('agente_codigo', '').strip()
     metodo_pago = request.POST.get('metodo_pago', '')
     comentarios = request.POST.get('comentarios_pago', '').strip()
+    print(f"👤 Agente: {agente_nom} ({agente_cod}) | Método: {metodo_pago} | Comentarios: {comentarios}")
 
-    print(f"👤 Agente: {agente_nom} ({agente_cod}) | Método de pago: {metodo_pago} | Comentarios: {comentarios}")
-
+    print("🔎 Buscando proveedor DISTALCU...")
     try:
         proveedor_distal = Proveedor.objects.get(nombre__iexact="DISTALCU")
         print("✅ Proveedor DISTALCU encontrado.")
     except Proveedor.DoesNotExist:
         proveedor_distal = None
-        print("❌ Proveedor DISTALCU no encontrado.")
+        print("❌ Proveedor DISTALCU no existe.")
 
+    print("📨 Creando instancia de Reserva...")
     reserva = Reserva.objects.create(
         hotel_importado=hotel,
         nombre_usuario=agente_nom,
@@ -2706,7 +2719,9 @@ def confirmar_reserva_distal(request, hotel_code):
     )
     print(f"✅ Reserva creada con ID: {reserva.id}")
 
+    print("🏨 Guardando habitaciones y pasajeros...")
     for h in habitaciones:
+        print(f"  🛏️ Guardando habitación #{h['roomNumber']}...")
         hab_res = HabitacionReserva.objects.create(
             reserva=reserva,
             habitacion_nombre=h['nombre_habitacion'],
@@ -2717,7 +2732,7 @@ def confirmar_reserva_distal(request, hotel_code):
             oferta_codigo='',
             booking_code=h['opcion']['booking_code']
         )
-        print(f"🏨 Habitación {h['roomNumber']} guardada: {h['nombre_habitacion']} (Booking Code: {h['opcion']['booking_code']})")
+        print(f"  ✅ Habitación guardada: {hab_res.habitacion_nombre} (Booking Code: {hab_res.booking_code})")
 
         for a in h['adultos_numeros']:
             pasajero = Pasajero.objects.create(
@@ -2731,7 +2746,7 @@ def confirmar_reserva_distal(request, hotel_code):
                 telefono=request.POST.get(f"hab_{h['roomNumber']}_adulto_{a}_telefono", ''),
                 tipo='adulto'
             )
-            print(f"👨 Adulto {a} creado: {pasajero.nombre}")
+            print(f"    👨 Adulto #{a} creado: {pasajero.nombre}")
 
         for n in h['ninos_numeros']:
             pasajero = Pasajero.objects.create(
@@ -2743,13 +2758,16 @@ def confirmar_reserva_distal(request, hotel_code):
                 pais_emision_pasaporte=request.POST.get(f"hab_{h['roomNumber']}_nino_{n}_pais", ''),
                 tipo='nino'
             )
-            print(f"🧒 Niño {n} creado: {pasajero.nombre}")
+            print(f"    🧒 Niño #{n} creado: {pasajero.nombre}")
 
+    print("📧 Enviando correo de confirmación de la reserva...")
     enviar_correo_confirmacion(reserva)
-    print("📧 Correo de confirmación enviado.")
+    print("✅ Correo enviado correctamente.")
 
+    print("🎉 Reserva confirmada exitosamente.")
     messages.success(request, "¡Tu reserva se ha confirmado correctamente!")
     return redirect('booking:user_dashboard')
+
 
 
 # ─────────────────────────────────
